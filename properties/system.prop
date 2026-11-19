@@ -226,6 +226,6 @@ ro.tr_launcher.standardwidget.preview.feature.support=1
 # end of file
 
 # InfinityX
-ro.infinity.camera=50MP + 50MP + 8MP
+ro.infinity.camera=50MP + 13MP
 ro.infinity.soc=MT6789
-ro.product.marketname=Camon 40 Pro 4G
+ro.product.marketname=HOT 60 Pro
