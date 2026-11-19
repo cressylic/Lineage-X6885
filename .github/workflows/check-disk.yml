@@ -1,0 +1,48 @@
+name: Check Disk
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Test Disk Cleanup
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: System Info
+        run: |
+          echo "=== CPU ==="
+          lscpu | grep -E "Model name|CPU\(s\):|Thread|Core"
+          echo "=== RAM ==="
+          free -h
+          echo "=== DISK SEBELUM ==="
+          df -h /
+          echo "=== PENGGUNAAN DIRECTORY BESAR ==="
+          sudo du -sh /usr/share/dotnet /usr/local/lib/android /opt/hostedtoolcache /var/lib/docker 2>/dev/null || true
+
+      - name: Clean Disk
+        run: |
+          set +e
+          sudo rm -rf /usr/share/dotnet            || true
+          sudo rm -rf /usr/local/lib/android       || true
+          sudo rm -rf /opt/ghc /usr/local/.ghcup   || true
+          sudo rm -rf /opt/hostedtoolcache         || true
+          sudo rm -rf /usr/local/share/boost       || true
+          sudo rm -rf /opt/az /usr/share/miniconda || true
+          sudo rm -rf /usr/local/share/powershell  || true
+          sudo rm -rf /usr/local/go /usr/lib/jvm/*graalvm* || true
+          sudo rm -rf /usr/share/swift             || true
+          sudo rm -rf /usr/local/share/chromium    || true
+          sudo rm -rf /opt/microsoft               || true
+          sudo rm -rf /var/lib/docker/* /var/lib/containerd/* || true
+          sudo docker image prune -af              || true
+          sudo apt-get clean                       || true
+          sudo rm -rf /var/lib/apt/lists/*         || true
+          sudo journalctl --vacuum-size=10M        || true
+
+      - name: Result
+        run: |
+          echo "=== DISK SESUDAH DIBERSIHKAN ==="
+          df -h /
+          echo "=== SISA RUANG TERSEDIA ==="
+          df -BG --output=avail / | tail -1 | tr -dc '0-9' | awk '{print $1 " GB ruang kosong murni siap dipakai"}'
