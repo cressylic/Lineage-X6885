@@ -102,26 +102,6 @@ jobs:
             -u "${{ github.event.inputs.manifest_url }}" \
             -b "${{ github.event.inputs.manifest_branch }}"
 
-          mkdir -p .repo/local_manifests
-          cat > .repo/local_manifests/drop-unused.xml <<'XML'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <manifest>
-            <remove-project name="platform/prebuilts/qemu-kernel" />
-            <remove-project name="platform/prebuilts/android-emulator" />
-            <remove-project name="device/google/cuttlefish_prebuilts" />
-            <remove-project name="device/google/cuttlefish" />
-            <remove-project name="platform/developers/build" />
-            <remove-project name="platform/developers/samples/android" />
-            <remove-project name="platform/prebuilts/asuite" />
-            <remove-project name="platform/test/app_compat/csuite" />
-            <remove-project name="platform/test/catbox" />
-            <remove-project name="platform/test/cts-root" />
-            <remove-project name="platform/test/dittosuite" />
-            <remove-project name="platform/test/mts" />
-            <remove-project name="platform/test/suite_harness" />
-          </manifest>
-          XML
-
       - name: Sync sources
         run: |
           cd ~/android/source
