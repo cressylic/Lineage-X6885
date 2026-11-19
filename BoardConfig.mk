@@ -1,0 +1,282 @@
+# SPDX-FileCopyrightText: The LineageOS Project
+# SPDX-License-Identifier: Apache-2.0
+
+DEVICE_PATH := device/infinix/X6885
+CONFIGS_PATH := $(DEVICE_PATH)/configs
+KERNEL_PATH := $(DEVICE_PATH)/kernel
+MODULES_PATH := $(KERNEL_PATH)/modules
+FIRMWARE_PATH := $(KERNEL_PATH)/firmware
+
+# A/B
+AB_OTA_UPDATER := true
+AB_OTA_PARTITIONS += \
+    boot \
+    vendor_boot \
+    dtbo \
+    vbmeta \
+    system \
+    system_dlkm \
+    system_ext \
+    product \
+    vendor \
+    vendor_dlkm \
+    odm \
+    odm_dlkm \
+    vbmeta_system \
+    vbmeta_vendor
+
+# A/B (firmware)
+AB_OTA_PARTITIONS += \
+    dpm \
+    gz \
+    lk \
+    logo \
+    mcupm \
+    md1img \
+    pi_img \
+    scp \
+    spmfw \
+    sspm \
+    tee \
+    tkv
+
+# Architecture
+TARGET_ARCH := arm64
+TARGET_ARCH_VARIANT := armv8-2a-dotprod
+TARGET_CPU_ABI := arm64-v8a
+TARGET_CPU_ABI2 :=
+TARGET_CPU_VARIANT := generic
+TARGET_CPU_VARIANT_RUNTIME := cortex-a76
+
+# ART
+ifeq ($(TARGET_BUILD_VARIANT),user)
+ART_BUILD_TARGET_NDEBUG := true
+ART_BUILD_TARGET_DEBUG := false
+ART_BUILD_HOST_NDEBUG := true
+ART_BUILD_HOST_DEBUG := false
+endif
+
+# Bootloader
+TARGET_BOOTLOADER_BOARD_NAME := Infinix-X6885
+TARGET_NO_BOOTLOADER := true
+
+# Device OTA Asserts
+TARGET_OTA_ASSERT_DEVICE := Infinix-X6885,X6885,X6885-OP
+
+# Display
+TARGET_SCREEN_DENSITY := 480
+TARGET_USES_VULKAN := true
+
+# Kernel & Bootimg
+BOARD_BOOT_HEADER_VERSION := 4
+BOARD_USES_GENERIC_KERNEL_IMAGE := true
+BOARD_RAMDISK_USE_LZ4 := true
+BOARD_KERNEL_SEPARATED_DTBO := true
+BOARD_KERNEL_CMDLINE += bootopt=64S3,32N2,64N2
+BOARD_KERNEL_CMDLINE += androidboot.init_fatal_reboot_target=recovery
+BOARD_KERNEL_CMDLINE += androidboot.serialconsole=0
+
+BOARD_KERNEL_PAGESIZE := 4096
+BOARD_KERNEL_BASE := 0x3fff8000
+BOARD_KERNEL_OFFSET := 0x00008000
+BOARD_RAMDISK_OFFSET := 0x26f08000
+BOARD_KERNEL_TAGS_OFFSET := 0x07c88000
+BOARD_DTB_OFFSET := 0x07c88000
+
+BOARD_MKBOOTIMG_ARGS += --kernel_offset $(BOARD_KERNEL_OFFSET)
+BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
+BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)
+BOARD_MKBOOTIMG_ARGS += --dtb_offset $(BOARD_DTB_OFFSET)
+BOARD_MKBOOTIMG_ARGS += --header_version $(BOARD_BOOT_HEADER_VERSION)
+
+BOARD_INCLUDE_DTB_IN_BOOTIMG := true
+BOARD_PREBUILT_DTBOIMAGE := $(KERNEL_PATH)/dtbo.img
+BOARD_PREBUILT_DTBIMAGE_DIR := $(KERNEL_PATH)/dtb
+
+TARGET_NO_KERNEL_OVERRIDE := true
+LOCAL_KERNEL := $(KERNEL_PATH)/Image.lz4
+PRODUCT_COPY_FILES += \
+    $(LOCAL_KERNEL):kernel
+
+# vendor_ramdisk modules
+BOARD_VENDOR_RAMDISK_KERNEL_MODULES_LOAD := $(strip $(shell if [ -f $(MODULES_PATH)/ramdisk/modules.load ]; then cat $(MODULES_PATH)/ramdisk/modules.load; fi))
+BOARD_VENDOR_RAMDISK_KERNEL_MODULES := $(addprefix $(MODULES_PATH)/ramdisk/, $(BOARD_VENDOR_RAMDISK_KERNEL_MODULES_LOAD))
+
+BOARD_VENDOR_RAMDISK_RECOVERY_KERNEL_MODULES_LOAD := $(strip $(shell if [ -f $(MODULES_PATH)/ramdisk/modules.load.recovery ]; then cat $(MODULES_PATH)/ramdisk/modules.load.recovery; fi))
+RECOVERY_MODULES := $(addprefix $(MODULES_PATH)/ramdisk/, $(BOARD_VENDOR_RAMDISK_RECOVERY_KERNEL_MODULES_LOAD))
+BOARD_VENDOR_RAMDISK_KERNEL_MODULES := $(sort $(BOARD_VENDOR_RAMDISK_KERNEL_MODULES) $(RECOVERY_MODULES))
+
+BOARD_VENDOR_KERNEL_MODULES_LOAD := $(strip $(shell if [ -f $(MODULES_PATH)/vendor_dlkm/modules.load ]; then cat $(MODULES_PATH)/vendor_dlkm/modules.load; fi))
+BOARD_VENDOR_KERNEL_MODULES := $(wildcard $(MODULES_PATH)/vendor_dlkm/*.ko)
+
+# system_dlkm
+BOARD_SYSTEM_KERNEL_MODULES_LOAD := $(strip $(shell if [ -f $(MODULES_PATH)/system_dlkm/modules.load ]; then cat $(MODULES_PATH)/system_dlkm/modules.load; fi))
+BOARD_SYSTEM_KERNEL_MODULES := $(addprefix $(MODULES_PATH)/system_dlkm/, $(BOARD_SYSTEM_KERNEL_MODULES_LOAD))
+
+# odm_dlkm
+BOARD_ODM_KERNEL_MODULES_LOAD := $(strip $(shell if [ -f $(MODULES_PATH)/odm_dlkm/modules.load ]; then cat $(MODULES_PATH)/odm_dlkm/modules.load; fi))
+BOARD_ODM_KERNEL_MODULES := $(addprefix $(MODULES_PATH)/odm_dlkm/, $(BOARD_ODM_KERNEL_MODULES_LOAD))
+
+# Kernel (dummy headers)
+TARGET_KERNEL_SOURCE := $(KERNEL_PATH)/kernel-headers
+
+# Partitions
+SSI_PARTITIONS := product system system_ext system_dlkm
+TREBLE_PARTITIONS := vendor_dlkm odm_dlkm vendor odm
+ALL_PARTITIONS := $(SSI_PARTITIONS) $(TREBLE_PARTITIONS)
+
+BOARD_FLASH_BLOCK_SIZE := 131072 # Scatter block_size 0x20000 = 131072
+BOARD_BOOTIMAGE_PARTITION_SIZE := 67108864
+BOARD_VENDOR_BOOTIMAGE_PARTITION_SIZE := 67108864
+BOARD_DTBOIMG_PARTITION_SIZE := 8388608
+BOARD_SUPER_PARTITION_SIZE := 12934782976
+BOARD_SUPER_PARTITION_GROUPS := mtk_dynamic_partitions
+BOARD_MTK_DYNAMIC_PARTITIONS_PARTITION_LIST := $(ALL_PARTITIONS)
+BOARD_MTK_DYNAMIC_PARTITIONS_SIZE := 12930588672
+# 12934782976 - 4194304 (4 MiB) = 12930588672
+
+BOARD_EROFS_PCLUSTER_SIZE := 262144
+BOARD_USES_METADATA_PARTITION := true
+BOARD_USES_ODM_DLKIMAGE := true
+
+# for user builds use erofs else build as ext4
+ifneq ($(filter userdebug eng,$(TARGET_BUILD_VARIANT)),)
+$(foreach p, $(call to-upper, $(SSI_PARTITIONS)), \
+    $(eval BOARD_$(p)IMAGE_FILE_SYSTEM_TYPE := ext4) \
+    $(eval TARGET_COPY_OUT_$(p) := $(call to-lower, $(p))))
+
+$(foreach p, $(call to-upper, $(TREBLE_PARTITIONS)), \
+    $(eval BOARD_$(p)IMAGE_FILE_SYSTEM_TYPE := ext4) \
+    $(eval TARGET_COPY_OUT_$(p) := $(call to-lower, $(p))))
+else
+$(foreach p, $(call to-upper, $(SSI_PARTITIONS)), \
+    $(eval BOARD_$(p)IMAGE_FILE_SYSTEM_TYPE := erofs) \
+    $(eval TARGET_COPY_OUT_$(p) := $(call to-lower, $(p))))
+
+$(foreach p, $(call to-upper, $(TREBLE_PARTITIONS)), \
+    $(eval BOARD_$(p)IMAGE_FILE_SYSTEM_TYPE := erofs) \
+    $(eval TARGET_COPY_OUT_$(p) := $(call to-lower, $(p))))
+endif
+
+# Partitions (firmware)
+BOARD_CUSTOMIMAGES_PARTITION_LIST := dpm gz lk logo mcupm md1img pi_img scp spmfw sspm tee tkv
+
+BOARD_DPM_IMAGE_LIST := $(FIRMWARE_PATH)/dpm.img
+BOARD_GZ_IMAGE_LIST := $(FIRMWARE_PATH)/gz.img
+BOARD_LK_IMAGE_LIST := $(FIRMWARE_PATH)/lk.img
+BOARD_LOGO_IMAGE_LIST := $(FIRMWARE_PATH)/logo.img
+BOARD_MCUPM_IMAGE_LIST := $(FIRMWARE_PATH)/mcupm.img
+BOARD_MD1IMG_IMAGE_LIST := $(FIRMWARE_PATH)/md1img.img
+BOARD_PI_IMG_IMAGE_LIST := $(FIRMWARE_PATH)/pi_img.img
+BOARD_SCP_IMAGE_LIST := $(FIRMWARE_PATH)/scp.img
+BOARD_SPMFW_IMAGE_LIST := $(FIRMWARE_PATH)/spmfw.img
+BOARD_SSPM_IMAGE_LIST := $(FIRMWARE_PATH)/sspm.img
+BOARD_TEE_IMAGE_LIST := $(FIRMWARE_PATH)/tee.img
+BOARD_TKV_IMAGE_LIST := $(FIRMWARE_PATH)/tkv.img
+
+# Platform
+TARGET_BOARD_PLATFORM := mt6789
+
+# Properties
+PROPS_PATH := $(DEVICE_PATH)/properties
+TARGET_SYSTEM_PROP += $(PROPS_PATH)/system.prop
+TARGET_SYSTEM_EXT_PROP += $(PROPS_PATH)/system_ext.prop
+TARGET_VENDOR_PROP += $(PROPS_PATH)/vendor.prop
+TARGET_ODM_PROP += $(PROPS_PATH)/odm.prop
+TARGET_PRODUCT_PROP += $(PROPS_PATH)/product.prop
+TARGET_VENDOR_DLKM_PROP += $(PROPS_PATH)/vendor_dlkm.prop
+TARGET_ODM_DLKM_PROP += $(PROPS_PATH)/odm_dlkm.prop
+TARGET_SYSTEM_DLKM_PROP += $(PROPS_PATH)/system_dlkm.prop
+
+# VINTF
+VINTF_PATH := $(CONFIGS_PATH)/vintf
+DEVICE_MANIFEST_FILE := $(VINTF_PATH)/manifest.xml
+DEVICE_MATRIX_FILE := $(VINTF_PATH)/compatibility_matrix.xml
+DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE := $(VINTF_PATH)/compatibility_matrix.device.xml
+
+# Recovery
+TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/rootdir/etc/fstab.mt6789
+BOARD_INCLUDE_RECOVERY_RAMDISK_IN_VENDOR_BOOT := true
+BOARD_MOVE_GSI_AVB_KEYS_TO_VENDOR_BOOT := true
+BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT := true
+TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888
+TARGET_USERIMAGES_USE_F2FS := true
+
+# Security patch level
+BOOT_SECURITY_PATCH := $(PLATFORM_SECURITY_PATCH)
+ODM_DLKM_SECURITY_PATCH := $(PLATFORM_SECURITY_PATCH)
+ODM_SECURITY_PATCH := $(PLATFORM_SECURITY_PATCH)
+SYSTEM_DLKM_SECURITY_PATCH := $(PLATFORM_SECURITY_PATCH)
+VENDOR_DLKM_SECURITY_PATCH := $(PLATFORM_SECURITY_PATCH)
+VENDOR_SECURITY_PATCH := $(PLATFORM_SECURITY_PATCH)
+
+# Verified Boot
+BOARD_AVB_ENABLE := true
+BOARD_AVB_ALGORITHM := SHA256_RSA2048
+BOARD_AVB_KEY_PATH := external/avb/test/data/testkey_rsa2048.pem
+
+BOARD_AVB_BOOT_KEY_PATH := external/avb/test/data/testkey_rsa2048.pem
+BOARD_AVB_BOOT_ALGORITHM := SHA256_RSA2048
+BOARD_AVB_BOOT_ROLLBACK_INDEX := 1
+BOARD_AVB_BOOT_ROLLBACK_INDEX_LOCATION := 3
+
+BOARD_AVB_VBMETA_SYSTEM := system
+BOARD_AVB_VBMETA_SYSTEM_KEY_PATH := external/avb/test/data/testkey_rsa2048.pem
+BOARD_AVB_VBMETA_SYSTEM_ALGORITHM := SHA256_RSA2048
+BOARD_AVB_VBMETA_SYSTEM_ROLLBACK_INDEX := 1
+BOARD_AVB_VBMETA_SYSTEM_ROLLBACK_INDEX_LOCATION := 2
+
+BOARD_AVB_VBMETA_VENDOR := vendor
+BOARD_AVB_VBMETA_VENDOR_KEY_PATH := external/avb/test/data/testkey_rsa2048.pem
+BOARD_AVB_VBMETA_VENDOR_ALGORITHM := SHA256_RSA2048
+BOARD_AVB_VBMETA_VENDOR_ROLLBACK_INDEX := 1
+BOARD_AVB_VBMETA_VENDOR_ROLLBACK_INDEX_LOCATION := 4
+
+BOARD_AVB_ODM_DLKM_ADD_HASHTREE_FOOTER_ARGS += --hash_algorithm sha256
+BOARD_AVB_PRODUCT_ADD_HASHTREE_FOOTER_ARGS += --hash_algorithm sha256
+BOARD_AVB_SYSTEM_ADD_HASHTREE_FOOTER_ARGS += --hash_algorithm sha256
+BOARD_AVB_SYSTEM_EXT_ADD_HASHTREE_FOOTER_ARGS += --hash_algorithm sha256
+BOARD_AVB_VENDOR_ADD_HASHTREE_FOOTER_ARGS += --hash_algorithm sha256
+BOARD_AVB_VENDOR_DLKM_ADD_HASHTREE_FOOTER_ARGS += --hash_algorithm sha256
+
+BOARD_AVB_ODM_ADD_HASHTREE_FOOTER_ARGS += --hash_algorithm sha256
+BOARD_AVB_SYSTEM_DLKM_ADD_HASHTREE_FOOTER_ARGS += --hash_algorithm sha256
+
+# Verified Boot | Disable hashtree flag for custom ROM flexibility
+BOARD_AVB_MAKE_VBMETA_IMAGE_ARGS += --set_hashtree_disabled_flag
+
+# Wi-Fi
+WIFI_DRIVER_FW_PATH_PARAM := "/dev/wmtWifi"
+WIFI_DRIVER_FW_PATH_STA := "STA"
+WIFI_DRIVER_FW_PATH_AP := "AP"
+WIFI_DRIVER_FW_PATH_P2P := "P2P"
+WIFI_DRIVER_STATE_CTRL_PARAM := "/dev/wmtWifi"
+WIFI_DRIVER_STATE_ON := "1"
+WIFI_DRIVER_STATE_OFF := "0"
+
+BOARD_HOSTAPD_DRIVER := NL80211
+BOARD_WPA_SUPPLICANT_DRIVER := NL80211
+
+WIFI_HAL_INTERFACE_COMBINATIONS := {{{STA}, 2}}
+WIFI_HAL_INTERFACE_COMBINATIONS += ,{{{AP_BRIDGED}, 1},}
+WIFI_HAL_INTERFACE_COMBINATIONS += ,{{{STA}, 1}, {{AP}, 1}}
+WIFI_HAL_INTERFACE_COMBINATIONS += ,{{{STA}, 1}, {{P2P}, 1}}
+WIFI_HAL_INTERFACE_COMBINATIONS += ,{{{STA}, 1}, {{NAN}, 1}}
+
+WIFI_HIDL_UNIFIED_SUPPLICANT_SERVICE_RC_ENTRY := true
+
+# Device sepolicy
+SEPOLICY_PATH := $(DEVICE_PATH)/sepolicy
+# Inherit the MediaTek base vendor policy
+-include device/mediatek/sepolicy_vndr/SEPolicy.mk
+# Device Selinux
+BOARD_VENDOR_SEPOLICY_DIRS += $(SEPOLICY_PATH)/vendor
+SYSTEM_EXT_PRIVATE_SEPOLICY_DIRS += $(SEPOLICY_PATH)/private
+SYSTEM_EXT_PUBLIC_SEPOLICY_DIRS += $(SEPOLICY_PATH)/public
+
+# Prebuilt ELF check bypass
+BUILD_BROKEN_PREBUILT_ELF_FILES := true
+BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
+
+# Inherit the proprietary files
+-include $(DEVICE_PATH)/vendor/BoardConfigVendor.mk

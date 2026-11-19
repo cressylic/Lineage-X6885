@@ -1,0 +1,6 @@
+####################################
+# from generate-common-build-props
+# These properties identify this partition image.
+####################################
+ro.tran.odm_dlkm.version=X6885-16.3.0.155
+# end of file

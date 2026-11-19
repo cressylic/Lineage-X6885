@@ -1,0 +1,89 @@
+{
+    "otpMap": [
+        {
+            "sensor_id": 14561,
+            "sensorIdx": 0,
+            "mclk": 3,
+            "port": 1,
+            "dir": 0,
+            "bitOrder": 0,
+            "orientation": 90,
+            "horizontalFov": 67,
+            "verticalFov": 49,
+            "lsc_start_addr": 3336,
+            "lsc_blockSize": 1868,
+            "lsc_firstPixel": 2,
+            "awb_offset": 3304,
+            "golden_offset": 3310,
+            "awb_checksum_addr": 3318,
+            "af_offset": 3321,
+            "af_checksum_addr": 3334,
+            "af_flag_addr": 3319,
+            "lhbit": 1,
+            "pdafmap": [
+                {
+                    "pdaftype": 0,
+                    "proc1_offset": 5208,
+                    "proc1Size": 496,
+                    "proc2_offset": 5704,
+                    "proc2Size": 1004,
+                    "proc1ChkSum": 6708,
+                    "proc2ChkSum": 6709
+                }
+            ]
+        },
+        {
+            "sensor_id": 14574,
+            "sensorIdx": 0,
+            "mclk": 3,
+            "port": 1,
+            "dir": 0,
+            "bitOrder": 0,
+            "orientation": 90,
+            "horizontalFov": 67,
+            "verticalFov": 49,
+            "lsc_start_addr": 3331,
+            "lsc_blockSize": 1868,
+            "lsc_firstPixel": 2,
+            "awb_offset": 3302,
+            "golden_offset": 3308,
+            "awb_checksum_addr": 3314,
+            "af_offset": 3317,
+            "af_checksum_addr": 3329,
+            "af_flag_addr": 3315,
+            "lhbit": 1,
+            "pdafmap": [
+                {
+                    "pdaftype": 0,
+                    "proc1_offset": 5201,
+                    "proc1Size": 496,
+                    "proc2_offset": 5697,
+                    "proc2Size": 1004,
+                    "proc1ChkSum": 65535,
+                    "proc2ChkSum": 6701
+                }
+            ]
+        },
+        {
+            "sensor_id": 5025,
+            "sensorIdx": 1,
+            "mclk": 0,
+            "port": 0,
+            "dir": 1,
+            "bitOrder": 0,
+            "orientation": 270,
+            "horizontalFov": 63,
+            "verticalFov": 40,
+            "lsc_start_addr": 3092,
+            "lsc_blockSize": 1868,
+            "lsc_firstPixel": 2,
+            "awb_offset": 3076,
+            "golden_offset": 3082,
+            "awb_checksum_addr": 3090,
+            "af_offset": 65535,
+            "af_checksum_addr": 65535,
+            "af_flag_addr": 65535,
+            "lhbit": 1
+        }
+    ]
+}

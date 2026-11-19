@@ -1,0 +1,6 @@
+####################################
+# from generate-common-build-props
+# These properties identify this partition image.
+####################################
+ro.tran.vendor_dlkm.version=MT6789-16.3.0.155_STB261002172456
+# end of file

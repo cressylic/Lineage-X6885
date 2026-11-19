@@ -1,0 +1,7 @@
+####################################
+# from generate-common-build-props
+# These properties identify this partition image.
+####################################
+ro.tran.system_ext.version=16.3.0.155SP15_STB261002172110
+ro.config.isolated_compilation_enabled=true
+# end of file
