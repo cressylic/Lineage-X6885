@@ -11,6 +11,12 @@ on:
         description: "Manifest branch"
         required: true
         default: "lineage-23.2"
+      build_target:
+        description: "Build target"
+        required: true
+        default: "bacon"
+        type: choice
+        options: [bacon, fastboot, systemimage]
       build_type:
         description: "Build type"
         required: true
@@ -25,7 +31,7 @@ concurrency:
 jobs:
   build:
     name: Build ROM
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-24.04
     timeout-minutes: 480
 
     steps:
@@ -39,12 +45,23 @@ jobs:
           sudo rm -rf /usr/local/share/boost       || true
           sudo rm -rf /opt/az /usr/share/miniconda || true
           sudo rm -rf /usr/local/share/powershell  || true
-          sudo rm -rf /usr/local/go /usr/lib/jvm/*graalvm* || true
+          sudo rm -rf /usr/local/go                || true
           sudo rm -rf /usr/share/swift             || true
           sudo rm -rf /usr/local/share/chromium    || true
           sudo rm -rf /opt/microsoft               || true
           sudo rm -rf /var/lib/docker/* /var/lib/containerd/* || true
           sudo docker image prune -af              || true
+
+          sudo rm -rf /usr/lib/llvm-*              || true
+          sudo rm -rf /usr/src/linux-headers-*     || true
+          sudo rm -rf /usr/share/man /usr/share/doc || true
+          sudo rm -rf /usr/local/share/.cache /root/.cache /home/runner/.cache || true
+          sudo rm -rf /var/lib/snapd /snap         || true
+          sudo rm -rf /usr/lib/jvm/temurin-* /usr/lib/jvm/*graalvm* || true
+          sudo rm -rf /usr/share/php* /usr/lib/php* || true
+          sudo rm -rf /usr/local/julia* /usr/lib/google-cloud-sdk || true
+          sudo rm -rf /opt/runner-cache /opt/pipx /opt/google /opt/actionarchivecache /home/linuxbrew || true
+
           sudo apt-get clean                       || true
           sudo rm -rf /var/lib/apt/lists/*         || true
           sudo journalctl --vacuum-size=10M        || true
@@ -86,18 +103,12 @@ jobs:
             -b "${{ github.event.inputs.manifest_branch }}"
 
           mkdir -p .repo/local_manifests
-          cat > .repo/local_manifests/drop-unused-arm64.xml <<'XML'
+          cat > .repo/local_manifests/drop-unused.xml <<'XML'
           <?xml version="1.0" encoding="UTF-8"?>
           <manifest>
-            <remove-project name="kernel/prebuilts/6.1/x86-64" />
-            <remove-project name="kernel/prebuilts/6.6/x86-64" />
-            <remove-project name="kernel/prebuilts/6.12/x86-64" />
-            <remove-project name="kernel/prebuilts/mainline/x86-64" />
             <remove-project name="platform/prebuilts/qemu-kernel" />
             <remove-project name="platform/prebuilts/android-emulator" />
             <remove-project name="device/google/cuttlefish_prebuilts" />
-            <remove-project name="platform/prebuilts/bazel/linux-x86_64" />
-            <remove-project name="platform/external/openwrt-prebuilts" />
             <remove-project name="device/google/cuttlefish" />
             <remove-project name="platform/developers/build" />
             <remove-project name="platform/developers/samples/android" />
@@ -141,164 +152,26 @@ jobs:
           cd ~/android/source
           find . -type d -name .git -prune -exec rm -rf {} + 2>/dev/null || true
           rm -rf .repo 2>/dev/null || true
-          rm -rf kernel/prebuilts/6.1/x86_64 \
-                 kernel/prebuilts/6.6/x86_64 \
-                 kernel/prebuilts/6.12/x86_64 \
-                 kernel/prebuilts/mainline/x86_64 \
-                 kernel/prebuilts/common-modules/virtual-device/*/x86-64 \
-                 prebuilts/qemu-kernel \
-                 prebuilts/android-emulator \
-                 device/google/cuttlefish_prebuilts \
-                 prebuilts/bazel/linux-x86_64 \
-                 external/openwrt-prebuilts 2>/dev/null || true
+          rm -rf prebuilts/qemu-kernel prebuilts/android-emulator device/google/cuttlefish_prebuilts 2>/dev/null || true
+          rm -rf hardware/qcom 2>/dev/null || true
 
       - name: Enable swap
         run: |
           set +e
           sudo swapoff /swapfile 2>/dev/null || true
           sudo rm -f /swapfile
-
           AVAIL_GB=$(df -BG --output=avail / | tail -1 | tr -dc '0-9')
-          HEADROOM_GB=10
-          MIN_SWAP_GB=4
-          MAX_SWAP_GB=14
-
+          HEADROOM_GB=15
           SWAP_GB=$((AVAIL_GB - HEADROOM_GB))
-          if [ "$SWAP_GB" -gt "$MAX_SWAP_GB" ]; then SWAP_GB=$MAX_SWAP_GB; fi
-          if [ "$SWAP_GB" -lt "$MIN_SWAP_GB" ]; then SWAP_GB=$MIN_SWAP_GB; fi
-
-          MIN_REMAIN_GB=10
-          if [ "$AVAIL_GB" -le $((SWAP_GB + MIN_REMAIN_GB)) ]; then
-            SWAP_GB=$((AVAIL_GB - MIN_REMAIN_GB))
-            if [ "$SWAP_GB" -lt 2 ]; then SWAP_GB=2; fi
-          fi
-
+          if [ "$SWAP_GB" -gt 12 ]; then SWAP_GB=12; fi
+          if [ "$SWAP_GB" -lt 4 ]; then SWAP_GB=4; fi
           sudo fallocate -l ${SWAP_GB}G /swapfile 2>/dev/null || sudo dd if=/dev/zero of=/swapfile bs=1M count=$((SWAP_GB*1024))
           sudo chmod 600 /swapfile 2>/dev/null || true
           sudo mkswap /swapfile 2>/dev/null || true
           sudo swapon /swapfile 2>/dev/null || true
-          sudo sysctl -w vm.swappiness=100 || true
+          sudo sysctl -w vm.swappiness=60 || true
 
-      - name: Setup Go toolchain
-        run: |
-          cd ~/android/source
-          GOROOT_DIR="prebuilts/go/linux-arm64"
-          mkdir -p prebuilts/go
-          if [ ! -x "$GOROOT_DIR/bin/go" ]; then
-            GOVER="go1.23.4"
-            curl -fL --retry 3 --connect-timeout 30 \
-              "https://go.dev/dl/${GOVER}.linux-arm64.tar.gz" -o /tmp/go.tar.gz
-            mkdir -p /tmp/goextract
-            tar -C /tmp/goextract -xzf /tmp/go.tar.gz
-            rm -rf "$GOROOT_DIR"
-            mv /tmp/goextract/go "$GOROOT_DIR"
-            rm -rf /tmp/goextract /tmp/go.tar.gz
-          fi
-          export GOROOT="$(cd "$GOROOT_DIR" && pwd)"
-          export PATH="$GOROOT/bin:$PATH"
-          unset GOPATH GOFLAGS
-          ( cd "$GOROOT/src" && GO111MODULE=off GOPATH="$GOROOT" \
-              GODEBUG=installgoroot=all go install -a std 2>&1 | tail -10 ) || true
-
-      - name: Setup Rust toolchain
-        run: |
-          cd ~/android/source
-          RV="1.83.0"
-          TRIPLE="aarch64-unknown-linux-gnu"
-          D="prebuilts/rust/linux-arm64/$RV"
-          LIBDIR="$D/lib/rustlib/$TRIPLE/lib"
-
-          if [ ! -x "$D/bin/rustc" ] || ! ls "$LIBDIR"/libstd-*.rlib >/dev/null 2>&1; then
-            mkdir -p /tmp/rustdrop /tmp/ruststage
-            curl -fL --retry 3 -o /tmp/rustdrop/rust.tar.gz \
-              "https://static.rust-lang.org/dist/rust-${RV}-${TRIPLE}.tar.gz"
-            tar xzf /tmp/rustdrop/rust.tar.gz -C /tmp/rustdrop
-            SRC="/tmp/rustdrop/rust-${RV}-${TRIPLE}"
-            WANT="rustc cargo rust-std-${TRIPLE} clippy-preview rustfmt-preview"
-            COMPONENTS=""
-            for c in $WANT; do
-              if grep -qx "$c" "$SRC/components"; then
-                COMPONENTS="${COMPONENTS:+$COMPONENTS,}$c"
-              fi
-            done
-            ( cd "$SRC" && sh ./install.sh --prefix=/tmp/ruststage --disable-ldconfig --components="$COMPONENTS" )
-            mkdir -p "$D"
-            cp -a /tmp/ruststage/. "$D/"
-            rm -rf /tmp/rustdrop /tmp/ruststage
-          fi
-
-          mkdir -p "$D/lib64"
-          if ! ls "$D/lib64"/* >/dev/null 2>&1; then
-            ( cd "$D/lib64" && ln -sf ../lib/librustc_driver-*.so . ) || true
-            for l in "$D/lib64"/*; do [ -e "$l" ] || rm -f "$l"; done
-          fi
-
-          MUSL_LIBDIR="$D/lib/rustlib/aarch64-unknown-linux-musl/lib"
-          if [ ! -d "$MUSL_LIBDIR" ] || [ "$(ls "$MUSL_LIBDIR"/libstd-*.rlib 2>/dev/null | wc -l)" != "1" ]; then
-            mkdir -p /tmp/rustmusl
-            curl -fL --retry 3 -o /tmp/rustmusl/std.tar.gz "https://static.rust-lang.org/dist/rust-std-${RV}-aarch64-unknown-linux-musl.tar.gz"
-            tar xzf /tmp/rustmusl/std.tar.gz -C /tmp/rustmusl
-            ( cd "/tmp/rustmusl/rust-std-${RV}-aarch64-unknown-linux-musl" && sh ./install.sh --prefix=/tmp/ruststage-musl --disable-ldconfig --components=rust-std-aarch64-unknown-linux-musl )
-            mkdir -p "$D"
-            cp -a /tmp/ruststage-musl/. "$D/"
-            rm -rf /tmp/rustmusl /tmp/ruststage-musl
-          fi
-
-      - name: Setup Clang
-        run: |
-          cd ~/android/source
-          CLANG_DIR="prebuilts/clang/host/linux-arm64"
-          if [ ! -x "$CLANG_DIR/clang-r584948b/bin/clang" ]; then
-            mkdir -p "$CLANG_DIR"
-            rm -rf /tmp/clangarm
-            git clone --depth=1 --filter=blob:none --sparse \
-              -b mirror-goog-main-prebuilts \
-              https://android.googlesource.com/platform/prebuilts/clang/host/linux-arm64 \
-              /tmp/clangarm
-            ( cd /tmp/clangarm && git sparse-checkout set clang-r584948b )
-            mv /tmp/clangarm/clang-r584948b "$CLANG_DIR/clang-r584948b"
-            rm -rf /tmp/clangarm
-          fi
-          for V in clang-r547379 clang-r584948; do
-            ln -sfn clang-r584948b "$CLANG_DIR/$V"
-          done
-          ln -sfn 22 "$CLANG_DIR/clang-r584948b/lib/clang/20"
-
-      - name: Setup JDK 8
-        run: |
-          cd ~/android/source
-          set -o pipefail
-          JDK8_DIR="prebuilts/jdk/jdk8/linux-arm64"
-          JDK8_TARBALL="/tmp/jdk8arm64-tarball.tar.gz"
-          JDK8_EXTRACT="/tmp/jdk8arm64-extract"
-          if [ ! -x "$JDK8_DIR/bin/java" ]; then
-            rm -rf "$JDK8_DIR" "$JDK8_TARBALL" "$JDK8_EXTRACT"
-            mkdir -p "$JDK8_DIR" "$JDK8_EXTRACT"
-            curl -fL --retry 3 -o "$JDK8_TARBALL" "https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u504-b01/OpenJDK8U-jdk_aarch64_linux_hotspot_8u504b01.tar.gz"
-            tar -xzf "$JDK8_TARBALL" -C "$JDK8_EXTRACT"
-            JDK8_SRC=$(find "$JDK8_EXTRACT" -mindepth 1 -maxdepth 1 -name "jdk*" -type d | head -1)
-            cp -a "$JDK8_SRC/." "$JDK8_DIR/"
-            rm -rf "$JDK8_TARBALL" "$JDK8_EXTRACT"
-          fi
-
-      - name: Setup JDK 21
-        run: |
-          cd ~/android/source
-          set -o pipefail
-          JDK21_DIR="prebuilts/jdk/jdk21/linux-arm64"
-          JDK21_TARBALL="/tmp/jdk21arm64-tarball.tar.gz"
-          JDK21_EXTRACT="/tmp/jdk21arm64-extract"
-          if [ ! -x "$JDK21_DIR/bin/javap" ]; then
-            rm -rf "$JDK21_DIR" "$JDK21_TARBALL" "$JDK21_EXTRACT"
-            mkdir -p "$JDK21_DIR" "$JDK21_EXTRACT"
-            curl -fL --retry 3 -o "$JDK21_TARBALL" "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jdk_aarch64_linux_hotspot_21.0.13_9.tar.gz"
-            tar -xzf "$JDK21_TARBALL" -C "$JDK21_EXTRACT"
-            JDK21_SRC=$(ls -d "$JDK21_EXTRACT"/*/ | head -1)
-            cp -a "$JDK21_SRC/." "$JDK21_DIR/"
-            rm -rf "$JDK21_TARBALL" "$JDK21_EXTRACT"
-          fi
-
-      - name: Setup Java Environment
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -316,28 +189,13 @@ jobs:
           mkdir -p "$TARGET_PATH"
           cp -r "$GITHUB_WORKSPACE/device-tree/." "$TARGET_PATH/"
 
-      - name: Host Compatibility Check
-        run: |
-          cd ~/android/source
-          python3 "$GITHUB_WORKSPACE/device-tree/scripts/test-host.py" --root "$PWD"
-
-      - name: Apply Host Compatibility
-        run: |
-          cd ~/android/source
-          bash "$GITHUB_WORKSPACE/device-tree/scripts/patch-host.sh" "$PWD"
-
-      - name: Apply Tree Patches
-        run: |
-          cd ~/android/source
-          bash "$GITHUB_WORKSPACE/device-tree/scripts/patch-tree.sh" "$PWD"
-
       - name: Setup Compiler Cache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: build-ccache-${{ github.ref }}
           restore-keys: |
             build-ccache-
-          max-size: 5G
+          max-size: 8G
 
       - name: Build
         run: |
@@ -349,9 +207,9 @@ jobs:
           export CCACHE_EXEC=$(which ccache)
           export USE_CCACHE=1
           export CCACHE_DIR=/home/runner/.ccache
-          ccache -M 5G
+          ccache -M 8G
           ccache -z
-          JOBS=1
+          JOBS=$(nproc --all)
 
           LUNCH_TARGET=""
           if [ -f "$TARGET_PATH/AndroidProducts.mk" ]; then
@@ -371,8 +229,17 @@ jobs:
           ( while true; do sleep 300; free -h || true; df -h / 2>/dev/null || true; done ) &
           HB=$!
 
+          BUILD_MODE="${{ github.event.inputs.build_target || 'bacon' }}"
+          if [ "$BUILD_MODE" = "bacon" ]; then
+            CMD="bacon"
+          elif [ "$BUILD_MODE" = "fastboot" ]; then
+            CMD="bootimage vendor_bootimage superimage"
+          else
+            CMD="systemimage"
+          fi
+
           set -o pipefail
-          if ! mka systemimage -j$JOBS 2>&1 | tee build.log; then
+          if ! mka $CMD -j$JOBS 2>&1 | tee build.log; then
             grep -n -B 4 -A 8 \
               -E 'error:|missing dependencies|undefined module|missing variant|unrecognized module type' \
               build.log | head -250 || true
@@ -381,29 +248,19 @@ jobs:
           fi
           kill $HB 2>/dev/null || true
 
-      - name: Failure Diagnostics
-        if: failure()
-        run: |
-          cd ~/android/source
-          [ -f build.log ] || exit 0
-          bash "$GITHUB_WORKSPACE/device-tree/scripts/diagnose.sh" build.log || true
-
       - name: Cache Stats
         if: always()
         run: |
           ccache -s || true
 
-      - name: Validate Output
-        if: success()
-        run: |
-          find ~/android/source/out/target/product/ -name "system.img" -size +100M | grep -q "system.img" || exit 1
-
       - name: Upload Artifacts
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: rom-artifact-${{ github.run_number }}
-          path: /home/runner/android/source/out/target/product/*/*.img
+          name: rom-output-${{ github.run_number }}
+          path: |
+            /home/runner/android/source/out/target/product/*/*.zip
+            /home/runner/android/source/out/target/product/*/*.img
           if-no-files-found: ignore
           retention-days: 14
 
