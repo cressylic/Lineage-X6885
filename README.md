@@ -1,9 +1,5 @@
 # LineageOS 23.2 All-in-One Device Tree for Infinix X6885
-
-All-in-one device tree (including inline kernel and prebuilt vendor blobs) for building LineageOS 23.2 (Android 16 / SDK 36) on the **Infinix X6885** (MediaTek Helio G99 / MT6789).
-
----
-
+## WIP
 ## Device Specifications
 
 | Property | Value |
