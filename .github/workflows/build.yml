@@ -331,6 +331,14 @@ jobs:
           cd ~/android/source
           bash "$GITHUB_WORKSPACE/device-tree/scripts/patch-tree.sh" "$PWD"
 
+      - name: Setup Compiler Cache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: build-ccache-${{ github.ref }}
+          restore-keys: |
+            build-ccache-
+          max-size: 5G
+
       - name: Build
         run: |
           cd ~/android/source
@@ -338,7 +346,11 @@ jobs:
           sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches' || true
 
           source build/envsetup.sh
-          export USE_CCACHE=0
+          export CCACHE_EXEC=$(which ccache)
+          export USE_CCACHE=1
+          export CCACHE_DIR=/home/runner/.ccache
+          ccache -M 5G
+          ccache -z
           JOBS=1
 
           LUNCH_TARGET=""
@@ -375,6 +387,11 @@ jobs:
           cd ~/android/source
           [ -f build.log ] || exit 0
           bash "$GITHUB_WORKSPACE/device-tree/scripts/diagnose.sh" build.log || true
+
+      - name: Cache Stats
+        if: always()
+        run: |
+          ccache -s || true
 
       - name: Validate Output
         if: success()
