@@ -41,7 +41,6 @@ jobs:
           sudo rm -rf /usr/share/dotnet            || true
           sudo rm -rf /usr/local/lib/android       || true
           sudo rm -rf /opt/ghc /usr/local/.ghcup   || true
-          sudo rm -rf /opt/hostedtoolcache         || true
           sudo rm -rf /usr/local/share/boost       || true
           sudo rm -rf /opt/az /usr/share/miniconda || true
           sudo rm -rf /usr/local/share/powershell  || true
@@ -49,19 +48,14 @@ jobs:
           sudo rm -rf /usr/share/swift             || true
           sudo rm -rf /usr/local/share/chromium    || true
           sudo rm -rf /opt/microsoft               || true
-          sudo rm -rf /var/lib/docker/* /var/lib/containerd/* || true
-          sudo docker image prune -af              || true
-
+          sudo rm -rf /usr/local/julia*            || true
+          sudo rm -rf /usr/lib/google-cloud-sdk    || true
           sudo rm -rf /usr/lib/llvm-*              || true
           sudo rm -rf /usr/src/linux-headers-*     || true
           sudo rm -rf /usr/share/man /usr/share/doc || true
-          sudo rm -rf /usr/local/share/.cache /root/.cache /home/runner/.cache || true
-          sudo rm -rf /var/lib/snapd /snap         || true
-          sudo rm -rf /usr/lib/jvm/temurin-* /usr/lib/jvm/*graalvm* || true
           sudo rm -rf /usr/share/php* /usr/lib/php* || true
-          sudo rm -rf /usr/local/julia* /usr/lib/google-cloud-sdk || true
-          sudo rm -rf /opt/runner-cache /opt/pipx /opt/google /opt/actionarchivecache /home/linuxbrew || true
-
+          sudo rm -rf /var/lib/docker/* /var/lib/containerd/* || true
+          sudo docker image prune -af              || true
           sudo apt-get clean                       || true
           sudo rm -rf /var/lib/apt/lists/*         || true
           sudo journalctl --vacuum-size=10M        || true
